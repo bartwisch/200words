@@ -4,111 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>200 Wörter für Kinder</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #f0f2f5;
-        }
-
-        .container {
-            text-align: center;
-            padding: 2rem;
-            background-color: white;
-            border-radius: 1rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            max-width: 90%;
-            width: 500px;
-        }
-
-        .word-display {
-            font-size: 3rem;
-            margin: 2rem 0;
-            min-height: 4.5rem;
-            color: #2c3e50;
-            transition: filter 0.3s ease;
-        }
-
-        .word-display.active-word {
-            filter: blur(10px);
-        }
-
-        .word-display.revealed {
-            filter: blur(0);
-        }
-
-        .controls {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .controls-row {
-            margin-bottom: 1rem;
-            display: flex;
-            gap: 1rem;
-        }
-
-        .feedback-buttons {
-            display: none;
-        }
-
-        .feedback-buttons.visible {
-            display: flex;
-            gap: 1rem;
-        }
-
-        button {
-            padding: 0.8rem 1.5rem;
-            font-size: 1rem;
-            border: none;
-            border-radius: 0.5rem;
-            background-color: #3498db;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background-color: #2980b9;
-        }
-
-        button:disabled {
-            background-color: #bdc3c7;
-            cursor: not-allowed;
-        }
-
-        #revealBtn {
-            background-color: #27ae60;
-        }
-
-        #revealBtn:hover {
-            background-color: #219a52;
-        }
-
-        #successBtn {
-            background-color: #2ecc71;
-        }
-
-        #successBtn:hover {
-            background-color: #27ae60;
-        }
-
-        #errorBtn {
-            background-color: #e74c3c;
-        }
-
-        #errorBtn:hover {
-            background-color: #c0392b;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
@@ -116,129 +12,30 @@
         <div class="word-display" id="wordDisplay">Klick auf Start!</div>
         <div class="controls">
             <div class="controls-row">
-                <button id="prevBtn" onclick="previousWord()">Zurück</button>
-                <button id="playBtn" onclick="playWord()">Start</button>
-                <button id="nextBtn" onclick="nextWord()">Vor</button>
+                <button id="prevBtn">Zurück</button>
+                <button id="playBtn">Start</button>
+                <button id="nextBtn">Vor</button>
             </div>
             <div class="controls-row">
-                <button id="revealBtn" onclick="toggleReveal()">Zeigen</button>
+                <button id="revealBtn">Zeigen</button>
             </div>
             <div class="controls-row feedback-buttons" id="feedbackButtons">
-                <button id="successBtn" onclick="markSuccess()">Geschafft</button>
-                <button id="errorBtn" onclick="markError()">Fehler</button>
+                <button id="successBtn">Geschafft</button>
+                <button id="errorBtn">Fehler</button>
+            </div>
+        </div>
+        <div class="canvas-container">
+            <canvas id="drawingCanvas" width="500" height="200"></canvas>
+            <div id="accuracyDisplay"></div>
+            <div class="canvas-controls">
+                <button id="checkWritingBtn">Überprüfen</button>
+                <button id="clearCanvasBtn">Löschen</button>
             </div>
         </div>
     </div>
 
     <script src="words.js"></script>
-    <script>
-        let words = [];
-        let currentIndex = -1;
-        let wordHistory = [];
-        const synth = window.speechSynthesis;
-        let isRevealed = false;
-        let successWords = new Set();
-        let errorWords = new Set();
-
-        // Parse words from text
-        function parseWords() {
-            words = wordsText
-                .split('\n')
-                .filter(line => line.trim() && !line.match(/^[A-Z]$/))
-                .join(' ')
-                .split(/\s+/)
-                .filter(word => word && !word.match(/^[A-Z]$/))
-                .map(word => word.trim())
-                .filter(word => word);
-        }
-
-        function getRandomWord() {
-            const index = Math.floor(Math.random() * words.length);
-            currentIndex = index;
-            wordHistory.push(index);
-            return words[index];
-        }
-
-        function updateWordDisplay(word) {
-            const wordDisplay = document.getElementById('wordDisplay');
-            wordDisplay.textContent = word;
-            // Add active-word class when we have a word (not the initial message)
-            wordDisplay.classList.add('active-word');
-            // Hide word when new word is displayed
-            wordDisplay.classList.remove('revealed');
-            isRevealed = false;
-            document.getElementById('revealBtn').textContent = 'Zeigen';
-            document.getElementById('feedbackButtons').classList.remove('visible');
-        }
-
-        function toggleReveal() {
-            const wordDisplay = document.getElementById('wordDisplay');
-            const revealBtn = document.getElementById('revealBtn');
-            const feedbackButtons = document.getElementById('feedbackButtons');
-            isRevealed = !isRevealed;
-            
-            if (isRevealed) {
-                wordDisplay.classList.add('revealed');
-                revealBtn.textContent = 'Verstecken';
-                if (currentIndex !== -1) {
-                    feedbackButtons.classList.add('visible');
-                }
-            } else {
-                wordDisplay.classList.remove('revealed');
-                revealBtn.textContent = 'Zeigen';
-                feedbackButtons.classList.remove('visible');
-            }
-        }
-
-        function previousWord() {
-            if (wordHistory.length > 1) {
-                wordHistory.pop(); // Remove current word
-                currentIndex = wordHistory[wordHistory.length - 1];
-                updateWordDisplay(words[currentIndex]);
-                speakWord(words[currentIndex]);
-            }
-        }
-
-        function nextWord() {
-            updateWordDisplay(getRandomWord());
-            speakWord(words[currentIndex]);
-        }
-
-        function speakWord(word) {
-            synth.cancel(); // Stop any current speech
-            const utterance = new SpeechSynthesisUtterance(word);
-            utterance.lang = 'de-DE';
-            synth.speak(utterance);
-        }
-
-        function playWord() {
-            const playBtn = document.getElementById('playBtn');
-            if (currentIndex === -1) {
-                playBtn.textContent = 'Nochmal';
-                nextWord();
-            } else {
-                speakWord(words[currentIndex]);
-            }
-        }
-
-        function markSuccess() {
-            if (currentIndex !== -1) {
-                successWords.add(currentIndex);
-                errorWords.delete(currentIndex); // Remove from errors if it was there
-                nextWord();
-            }
-        }
-
-        function markError() {
-            if (currentIndex !== -1) {
-                errorWords.add(currentIndex);
-                successWords.delete(currentIndex); // Remove from successes if it was there
-                nextWord();
-            }
-        }
-
-        // Initialize
-        parseWords();
-    </script>
+    <script src="canvas.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
